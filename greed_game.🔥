@@ -1,0 +1,99 @@
+import random
+
+struct Position:
+    var x: Int
+    var y: Int
+
+    fn __init__(inout self, x: Int, y: Int):
+        self.x = x
+        self.y = y
+
+struct Move:
+    var x: Int
+    var y: Int
+
+    fn __init__(inout self, x: Int, y: Int):
+        self.x = x
+        self.y = y
+    
+
+# This should be an enum tbh, but it seems mojo doesn't support anything like that yet
+var move_up = Move(0, -1)
+var move_down = Move(0, 1)
+var move_left = Move(-1, 0)
+var move_right = Move(1, 0)
+
+
+struct Game:
+    var board: List[List[UInt8]]
+    var player_position: Position
+    var score: UInt64
+    var is_running: Bool
+
+    fn __init__(inout self, height: Int, width: Int):
+        self.board = List[List[UInt8]]()
+        self.player_position = Position(0, 0)
+        self.score = 0
+        self.is_running = True
+
+        for y in range(height):
+            var row = List[UInt8]()
+            for x in range(width):
+                var value = random.random_ui64(1, 9)
+                row.append(value.cast[DType.uint8]())
+            self.board.append(row)
+
+    fn print(borrowed self):
+        for y in range(len(self.board)):
+            for x in range(len(self.board[y])):
+                if y == self.player_position.y and x == self.player_position.x:
+                    print("X", end = " ")
+                else:
+                    var value = self.board[y][x]
+                    if value == 0:
+                        print(" ", end = " ")
+                    else:
+                        print(self.board[y][x], end = " ")
+            print()
+        print("Current", self.board[self.player_position.y][self.player_position.x])
+        print("Score", self.score)
+    
+    fn move(inout self, borrowed direction: Move):
+        if not self.is_running:
+            return
+        var value = self.board[self.player_position.y][self.player_position.x]
+        self.score += value.cast[DType.uint64]()
+        for y in range(value):
+            self.board[self.player_position.y][self.player_position.x] = 0
+            self.player_position.y = (self.player_position.y + direction.y) % len(self.board)
+            self.player_position.x = (self.player_position.x + direction.x) % len(self.board[0])
+        self.end_of_move()
+
+    fn end_of_move(inout self):
+        if self.board[self.player_position.y][self.player_position.x] == 0:
+            self.is_running = False
+
+
+fn main():
+    random.seed()
+
+    var total_score : UInt64 = 0
+    var num_games = 100000
+
+    for _ in range(num_games):
+        var game = Game(20, 20)
+        var moves = List[](0, 1, 2, 3)
+        while game.is_running:
+            var move = random.random_ui64(0, 4)
+            if move == 0:
+                game.move(move_up)
+            elif move == 1:
+                game.move(move_right)
+            elif move == 2:
+                game.move(move_down)
+            else:
+                game.move(move_left)
+        total_score += game.score
+    
+    print("Average:", total_score / num_games)
+    
